@@ -298,7 +298,7 @@ export default async function HomePage() {
           <div className="grid items-center gap-10 rounded-[44px] bg-white p-8 shadow-[0_18px_45px_rgba(11,37,56,0.13)] dark:bg-[#102C3D] md:grid-cols-[0.9fr_1.1fr] md:p-11">
             <div className="relative min-h-80 overflow-hidden rounded-[34px]">
               <Image
-                src="/cerita.png"
+                src="/cerita2.png"
                 alt="Tentang Krida Bercerita"
                 fill
                 className="object-cover"
