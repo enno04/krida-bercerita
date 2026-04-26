@@ -56,7 +56,7 @@ export default async function HomePage() {
               <p className="mt-6 max-w-2xl text-lg leading-8 text-[#37576B] dark:text-white/70">
                 Krida Bercerita adalah website untuk membaca cerita rakyat
                 Indonesia dengan tampilan ilustratif, edukatif, dan
-                menyenangkan untuk anak-anak serta pelajar.
+                menyenangkan untuk pelajar serta semua kalangan.
               </p>
 
               <div className="mt-8 flex flex-wrap gap-4">
@@ -135,7 +135,7 @@ export default async function HomePage() {
 
             <p className="max-w-md text-[#37576B] dark:text-white/70">
               Ringkasan fitur utama Krida Bercerita. Detail tiap fitur dibuat di
-              halaman terpisah agar tetap rapi dan mudah dibaca.
+              halaman terpisah agar tetap rapi dan mudah dibaca semua kalangan.
             </p>
           </div>
 
@@ -260,7 +260,7 @@ export default async function HomePage() {
               </div>
 
               <p className="max-w-md text-white/70">
-                Kelompokkan cerita berdasarkan wilayah agar pengunjung
+                Pengelompokkan cerita berdasarkan wilayah agar pengguna dapat
                 lebih mudah menemukan kisah yang ingin dibaca.
               </p>
             </div>

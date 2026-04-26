@@ -316,7 +316,7 @@ export default function QuizClient({ story, quiz }: QuizClientProps) {
           </p>
 
           <p className="mt-1 text-sm text-[#37576B] dark:text-white/70">
-            Tamu bisa mengerjakan quiz, tetapi nilai belum tersimpan.
+            Pengguna tanpa login tetap bisa mengerjakan quiz, tetapi nilai tidak disimpan.
           </p>
         </div>
 

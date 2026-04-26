@@ -130,8 +130,7 @@ export default async function StoryDetailPage({
                 </div>
 
                 <p className="mt-4 text-sm text-[#37576B] dark:text-white/60">
-                  Catatan: untuk cerita baru dari admin, quiz akan kita
-                  hubungkan ke database di tahap berikutnya.
+                  Catatan: untuk cerita dengan gambar yang kurang jelas, kami sarankan untuk membaca di perangkat dengan layar lebih besar agar pengalaman membaca lebih optimal.
                 </p>
               </div>
             </article>

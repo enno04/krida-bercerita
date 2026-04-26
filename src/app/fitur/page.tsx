@@ -38,9 +38,9 @@ const features = [
       "Hasil quiz user akan disimpan sebagai nilai terbaik sehingga pengguna bisa memantau perkembangan belajarnya.",
   },
   {
-    title: "Dashboard Admin",
+    title: "Cerita Rakyat Terbaru",
     description:
-      "Admin dapat menambah, mengedit, menghapus cerita, mengupload gambar, dan mengelola pertanyaan quiz.",
+      "Kami selalu menambahkan cerita baru secara berkala agar pengguna selalu memiliki kisah menarik untuk dibaca dan dipelajari.",
   },
 ];
 
@@ -61,7 +61,7 @@ export default function FiturPage() {
             <p className="mt-5 max-w-2xl text-lg leading-8 text-[#37576B] dark:text-white/70">
               Krida Bercerita dirancang sebagai website membaca cerita rakyat
               Indonesia yang edukatif, menarik, dan mudah digunakan oleh
-              pengunjung, user, maupun admin.
+              semua kalangan, terutama pelajar.
             </p>
           </div>
 
@@ -71,7 +71,7 @@ export default function FiturPage() {
             </h2>
 
             <p className="mt-3 text-sm leading-6 text-[#37576B] dark:text-white/70">
-              Tamu tetap bisa membaca cerita dan mengerjakan quiz. User yang
+              Pengguna biasa tetap bisa membaca cerita dan mengerjakan quiz. Pengguna yang sudah
               login mendapat fitur tambahan seperti bookmark, progress membaca,
               dan nilai terbaik quiz.
             </p>

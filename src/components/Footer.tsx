@@ -25,7 +25,7 @@ export default function Footer() {
             </p>
 
             <p className="mt-3 text-xs text-white/50">
-              © 2026 Krida Bercerita. Semua hak dilindungi.
+              © 2026 Krida Bercerita. Universitas Muhammadiyah Malang.
             </p>
           </div>
 

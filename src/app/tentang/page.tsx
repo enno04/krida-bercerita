@@ -89,7 +89,7 @@ export default function TentangPage() {
 
             <p className="mt-3 text-sm leading-6 text-[#37576B] dark:text-white/70">
               Website ini dapat digunakan oleh anak-anak, pelajar, guru,
-              pembaca umum, dan admin pengelola konten cerita.
+              pembaca umum, dan semua segala usia.
             </p>
           </article>
         </section>
