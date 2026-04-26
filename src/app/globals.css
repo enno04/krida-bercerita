@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+.dark body {
+  background: #071722;
+  color: #f8fbff;
+}
+
+:root {
+  --cream: #fff8e7;
+  --navy: #0b2538;
+  --blue: #0e5a78;
+  --coral: #ef4f3a;
+  --gold: #f6b23c;
+  --text-soft: #37576b;
+  --white: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--cream);
+  color: var(--navy);
+}
+
+a,
+button {
+  transition: 0.2s ease;
+}
+
+.dark body {
+  background: #071722;
+  color: #f8fbff;
+}
