@@ -98,7 +98,7 @@ export default function Navbar() {
             </div>
 
             <div className="rounded-2xl bg-white p-4 dark:bg-[#102C3D]">
-              <AuthNav />
+              <AuthNav onNavigate={closeMenu} />
             </div>
           </div>
         </div>

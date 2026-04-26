@@ -8,14 +8,17 @@ type Profile = {
   role: "user" | "admin";
 };
 
-export default function AuthNav() {
+type AuthNavProps = {
+  onNavigate?: () => void;
+};
+
+export default function AuthNav({ onNavigate }: AuthNavProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [role, setRole] = useState<"user" | "admin" | null>(null);
 
   useEffect(() => {
     async function getSessionAndRole() {
       const { data: sessionData } = await supabase.auth.getSession();
-
       const user = sessionData.session?.user;
 
       if (!user) {
@@ -46,8 +49,11 @@ export default function AuthNav() {
   }, []);
 
   async function handleLogout() {
+    onNavigate?.();
+
     await supabase.auth.signOut();
     setRole(null);
+
     window.location.href = "/";
   }
 
@@ -61,7 +67,8 @@ export default function AuthNav() {
     return (
       <Link
         href="/login"
-        className="rounded-full bg-[#0B2538] px-6 py-3 text-sm font-bold text-white dark:bg-white dark:text-[#0B2538]"
+        onClick={onNavigate}
+        className="inline-flex w-full justify-center rounded-full bg-[#0B2538] px-6 py-3 text-sm font-bold text-white dark:bg-white dark:text-[#0B2538] md:w-auto"
       >
         Login
       </Link>
@@ -69,10 +76,11 @@ export default function AuthNav() {
   }
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
       <Link
         href={role === "admin" ? "/admin" : "/dashboard"}
-        className="rounded-full bg-[#EF4F3A] px-6 py-3 text-sm font-bold text-white"
+        onClick={onNavigate}
+        className="inline-flex justify-center rounded-full bg-[#EF4F3A] px-6 py-3 text-sm font-bold text-white"
       >
         {role === "admin" ? "Admin" : "Dashboard"}
       </Link>

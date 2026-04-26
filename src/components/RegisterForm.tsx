@@ -35,7 +35,7 @@ export default function RegisterForm() {
     }
 
     setMessage(
-      "Akun berhasil dibuat. Silakan masuk ke halaman login."
+      "Akun berhasil dibuat. Silakan masuk ke halaman login di sini."
     );
 
     setFullName("");
