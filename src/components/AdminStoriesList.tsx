@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { supabase } from "../lib/supabaseClient";
 
@@ -16,26 +16,64 @@ type StoryRow = {
   created_at: string;
 };
 
+type QuizQuestionRow = {
+  id: string;
+  story_id: string;
+};
+
+type StoryWithQuizCount = StoryRow & {
+  quiz_count: number;
+};
+
 export default function AdminStoriesList() {
-  const [stories, setStories] = useState<StoryRow[]>([]);
+  const [stories, setStories] = useState<StoryWithQuizCount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState("");
 
+  const [search, setSearch] = useState("");
+  const [quizFilter, setQuizFilter] = useState("semua");
+  const [featuredFilter, setFeaturedFilter] = useState("semua");
+
   async function fetchStories() {
     setIsLoading(true);
+    setMessage("");
 
-    const { data, error } = await supabase
+    const { data: storyData, error: storyError } = await supabase
       .from("stories")
-      .select("id, slug, title, province, region, summary, image_url, is_featured, created_at")
+      .select(
+        "id, slug, title, province, region, summary, image_url, is_featured, created_at"
+      )
       .order("created_at", { ascending: false });
 
-    if (error) {
-      setMessage(error.message);
+    if (storyError) {
+      setMessage(storyError.message);
       setIsLoading(false);
       return;
     }
 
-    setStories(data ?? []);
+    const { data: quizData, error: quizError } = await supabase
+      .from("quiz_questions")
+      .select("id, story_id");
+
+    if (quizError) {
+      setMessage(quizError.message);
+      setIsLoading(false);
+      return;
+    }
+
+    const quizCountMap = new Map<string, number>();
+
+    (quizData ?? []).forEach((quiz: QuizQuestionRow) => {
+      const currentCount = quizCountMap.get(quiz.story_id) ?? 0;
+      quizCountMap.set(quiz.story_id, currentCount + 1);
+    });
+
+    const storiesWithQuizCount = (storyData ?? []).map((story) => ({
+      ...story,
+      quiz_count: quizCountMap.get(story.id) ?? 0,
+    }));
+
+    setStories(storiesWithQuizCount);
     setIsLoading(false);
   }
 
@@ -43,177 +81,329 @@ export default function AdminStoriesList() {
     fetchStories();
   }, []);
 
-    async function handleToggleFeatured(story: StoryRow) {
-        const { error } = await supabase
-            .from("stories")
-            .update({
-            is_featured: !story.is_featured,
-            })
-            .eq("id", story.id);
+  const filteredStories = useMemo(() => {
+    return stories.filter((story) => {
+      const keyword = search.toLowerCase().trim();
+
+      const matchSearch =
+        story.title.toLowerCase().includes(keyword) ||
+        story.province.toLowerCase().includes(keyword) ||
+        story.region.toLowerCase().includes(keyword) ||
+        story.slug.toLowerCase().includes(keyword) ||
+        story.summary.toLowerCase().includes(keyword);
+
+      const matchQuiz =
+        quizFilter === "semua" ||
+        (quizFilter === "sudah" && story.quiz_count > 0) ||
+        (quizFilter === "belum" && story.quiz_count === 0);
+
+      const matchFeatured =
+        featuredFilter === "semua" ||
+        (featuredFilter === "tampil" && story.is_featured) ||
+        (featuredFilter === "belum" && !story.is_featured);
+
+      return matchSearch && matchQuiz && matchFeatured;
+    });
+  }, [stories, search, quizFilter, featuredFilter]);
+
+  function resetFilter() {
+    setSearch("");
+    setQuizFilter("semua");
+    setFeaturedFilter("semua");
+  }
+
+  async function handleToggleFeatured(story: StoryWithQuizCount) {
+    const { error } = await supabase
+      .from("stories")
+      .update({
+        is_featured: !story.is_featured,
+      })
+      .eq("id", story.id);
 
     if (error) {
-        alert(error.message);
-        return;
+      alert(error.message);
+      return;
     }
 
     fetchStories();
-    }
-  
-  async function handleDelete(id: string) {
+  }
+
+  async function handleDelete(story: StoryWithQuizCount) {
     const confirmDelete = window.confirm(
-      "Yakin ingin menghapus cerita ini? Data yang dihapus tidak bisa dikembalikan."
+      `Yakin ingin menghapus cerita "${story.title}"? Data quiz, bookmark, progress, dan nilai quiz yang terkait cerita ini juga bisa ikut terdampak.`
     );
 
     if (!confirmDelete) return;
 
-    const { error } = await supabase.from("stories").delete().eq("id", id);
+    const { error } = await supabase.from("stories").delete().eq("id", story.id);
 
     if (error) {
-      setMessage(error.message);
+      alert(error.message);
       return;
     }
 
-    setMessage("Cerita berhasil dihapus.");
     fetchStories();
   }
 
-  if (isLoading) {
-    return (
-      <div className="mt-10 rounded-[32px] bg-white p-6 shadow-[0_10px_28px_rgba(11,37,56,0.09)] dark:bg-[#102C3D]">
-        <p className="font-bold text-[#0B2538] dark:text-white">
-          Memuat daftar cerita...
-        </p>
-      </div>
-    );
-  }
+  const totalWithQuiz = stories.filter((story) => story.quiz_count > 0).length;
+  const totalWithoutQuiz = stories.filter((story) => story.quiz_count === 0).length;
+  const totalFeatured = stories.filter((story) => story.is_featured).length;
 
   return (
-    <section className="mt-10 rounded-[28px] bg-white p-5 shadow-[0_10px_28px_rgba(11,37,56,0.09)] dark:bg-[#102C3D] md:rounded-[32px] md:p-6">
-      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+    <section className="mt-10 rounded-3xl bg-white p-5 shadow-xl dark:bg-[#102C3D] md:p-6">
+      <div className="mb-8 flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
         <div>
-          <h2 className="text-2xl font-extrabold text-[#0B2538] dark:text-white">
+          <h2 className="text-3xl font-extrabold text-[#0B2538] dark:text-white">
             Daftar Cerita
           </h2>
-          <p className="mt-2 text-sm text-[#37576B] dark:text-white/70">
-            Admin bisa mengelola cerita yang tersimpan di database Supabase.
+
+          <p className="mt-2 text-sm leading-6 text-[#37576B] dark:text-white/70">
+            Admin bisa mencari, memfilter, dan mengelola cerita yang tersimpan
+            di database Supabase.
           </p>
         </div>
 
         <Link
           href="/admin/cerita/tambah"
-          className="rounded-full bg-[#EF4F3A] px-6 py-3 text-center text-sm font-bold text-white"
+          className="rounded-full bg-[#EF4F3A] px-7 py-4 text-center text-sm font-bold text-white shadow-lg shadow-[#EF4F3A]/25"
         >
           + Tambah Cerita
         </Link>
       </div>
 
-      {message && (
-        <p className="mt-5 rounded-2xl bg-[#0E5A78]/10 p-4 text-sm font-semibold text-[#0B2538] dark:bg-white/10 dark:text-white">
-          {message}
-        </p>
+      <div className="mb-6 grid gap-4 md:grid-cols-3">
+        <div className="rounded-2xl bg-[#FFF8E7] p-5 dark:bg-[#071722]">
+          <p className="text-sm font-bold text-[#37576B] dark:text-white/70">
+            Total Cerita
+          </p>
+          <h3 className="mt-2 text-3xl font-extrabold text-[#0B2538] dark:text-white">
+            {stories.length}
+          </h3>
+        </div>
+
+        <div className="rounded-2xl bg-[#FFF8E7] p-5 dark:bg-[#071722]">
+          <p className="text-sm font-bold text-[#37576B] dark:text-white/70">
+            Sudah Ada Quiz
+          </p>
+          <h3 className="mt-2 text-3xl font-extrabold text-green-600">
+            {totalWithQuiz}
+          </h3>
+        </div>
+
+        <div className="rounded-2xl bg-[#FFF8E7] p-5 dark:bg-[#071722]">
+          <p className="text-sm font-bold text-[#37576B] dark:text-white/70">
+            Tampil di Beranda
+          </p>
+          <h3 className="mt-2 text-3xl font-extrabold text-[#F6B23C]">
+            {totalFeatured}
+          </h3>
+        </div>
+      </div>
+
+      <div className="mb-6 rounded-3xl bg-[#FFF8E7] p-4 dark:bg-[#071722]">
+        <div className="grid gap-4 lg:grid-cols-[1fr_220px_220px_120px]">
+          <label className="block">
+            <span className="mb-2 block text-sm font-bold text-[#0B2538] dark:text-white">
+              Cari cerita
+            </span>
+
+            <input
+              type="text"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Cari judul, provinsi, wilayah, slug..."
+              className="h-14 w-full rounded-2xl border border-[#0B2538]/10 bg-white px-5 font-medium text-[#0B2538] outline-none focus:border-[#EF4F3A] dark:border-white/10 dark:bg-[#102C3D] dark:text-white"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-sm font-bold text-[#0B2538] dark:text-white">
+              Status Quiz
+            </span>
+
+            <select
+              value={quizFilter}
+              onChange={(event) => setQuizFilter(event.target.value)}
+              className="h-14 w-full rounded-2xl border border-[#0B2538]/10 bg-white px-5 font-bold text-[#0B2538] outline-none focus:border-[#EF4F3A] dark:border-white/10 dark:bg-[#102C3D] dark:text-white"
+            >
+              <option value="semua">Semua</option>
+              <option value="sudah">Sudah ada quiz</option>
+              <option value="belum">Belum ada quiz</option>
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-sm font-bold text-[#0B2538] dark:text-white">
+              Status Beranda
+            </span>
+
+            <select
+              value={featuredFilter}
+              onChange={(event) => setFeaturedFilter(event.target.value)}
+              className="h-14 w-full rounded-2xl border border-[#0B2538]/10 bg-white px-5 font-bold text-[#0B2538] outline-none focus:border-[#EF4F3A] dark:border-white/10 dark:bg-[#102C3D] dark:text-white"
+            >
+              <option value="semua">Semua</option>
+              <option value="tampil">Tampil di beranda</option>
+              <option value="belum">Belum tampil</option>
+            </select>
+          </label>
+
+          <div className="flex items-end">
+            <button
+              type="button"
+              onClick={resetFilter}
+              className="h-14 w-full rounded-2xl border-2 border-[#0B2538]/15 px-5 font-extrabold text-[#0B2538] hover:border-[#EF4F3A] hover:text-[#EF4F3A] dark:border-white/15 dark:text-white"
+            >
+              Reset
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-col gap-2 text-sm font-semibold text-[#37576B] dark:text-white/70 md:flex-row md:items-center md:justify-between">
+          <p>
+            Menampilkan{" "}
+            <span className="font-extrabold text-[#EF4F3A]">
+              {filteredStories.length}
+            </span>{" "}
+            dari {stories.length} cerita
+          </p>
+
+          <p>
+            Belum ada quiz:{" "}
+            <span className="font-extrabold text-[#EF4F3A]">
+              {totalWithoutQuiz}
+            </span>
+          </p>
+        </div>
+      </div>
+
+      {isLoading && (
+        <div className="rounded-2xl bg-[#FFF8E7] p-6 text-center dark:bg-[#071722]">
+          <p className="font-bold text-[#0B2538] dark:text-white">
+            Memuat daftar cerita...
+          </p>
+        </div>
       )}
 
-      <div className="mt-6 overflow-x-auto">
-        <table className="w-full min-w-[760px] border-collapse">
-          <thead>
-            <tr className="border-b border-[#0B2538]/10 text-left text-sm text-[#37576B] dark:border-white/10 dark:text-white/70">
-              <th className="py-4 pr-4">Judul</th>
-              <th className="py-4 pr-4">Provinsi</th>
-              <th className="py-4 pr-4">Wilayah</th>
-              <th className="py-4 pr-4">Slug</th>
-              <th className="py-4 pr-4">Aksi</th>
-            </tr>
-          </thead>
+      {message && !isLoading && (
+        <div className="rounded-2xl bg-red-100 p-6 text-red-700">
+          <p className="font-bold">Gagal memuat cerita</p>
+          <p className="mt-2 text-sm">{message}</p>
+        </div>
+      )}
 
-          <tbody>
-            {stories.map((story) => (
-              <tr
-                key={story.id}
-                className="border-b border-[#0B2538]/10 text-sm dark:border-white/10"
-              >
-                <td className="py-4 pr-4">
-                  <div>
+      {!isLoading && !message && filteredStories.length === 0 && (
+        <div className="rounded-2xl bg-[#FFF8E7] p-6 text-center dark:bg-[#071722]">
+          <h3 className="text-xl font-extrabold text-[#0B2538] dark:text-white">
+            Cerita tidak ditemukan
+          </h3>
+
+          <p className="mt-2 text-sm text-[#37576B] dark:text-white/70">
+            Coba gunakan kata kunci atau filter yang berbeda.
+          </p>
+
+          <button
+            type="button"
+            onClick={resetFilter}
+            className="mt-5 rounded-full bg-[#EF4F3A] px-6 py-3 font-bold text-white"
+          >
+            Reset Filter
+          </button>
+        </div>
+      )}
+
+      {!isLoading && !message && filteredStories.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[880px] border-collapse">
+            <thead>
+              <tr className="border-b border-white/10 text-left text-sm text-[#37576B] dark:text-white/70">
+                <th className="py-4 pr-4">Judul</th>
+                <th className="py-4 pr-4">Provinsi</th>
+                <th className="py-4 pr-4">Wilayah</th>
+                <th className="py-4 pr-4">Slug</th>
+                <th className="py-4 pr-4">Aksi</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {filteredStories.map((story) => (
+                <tr
+                  key={story.id}
+                  className="border-b border-white/10 align-top text-sm"
+                >
+                  <td className="max-w-[240px] py-5 pr-4">
                     <p className="font-extrabold text-[#0B2538] dark:text-white">
                       {story.title}
                     </p>
-                    <p className="mt-1 line-clamp-1 max-w-xs text-[#37576B] dark:text-white/60">
+                    <p className="mt-1 line-clamp-2 text-[#37576B] dark:text-white/60">
                       {story.summary}
                     </p>
-                  </div>
-                </td>
+                  </td>
 
-                <td className="py-4 pr-4 text-[#37576B] dark:text-white/70">
-                  {story.province}
-                </td>
+                  <td className="py-5 pr-4 text-[#37576B] dark:text-white/80">
+                    {story.province}
+                  </td>
 
-                <td className="py-4 pr-4 text-[#37576B] dark:text-white/70">
-                  {story.region}
-                </td>
+                  <td className="py-5 pr-4 text-[#37576B] dark:text-white/80">
+                    {story.region}
+                  </td>
 
-                <td className="py-4 pr-4 text-[#37576B] dark:text-white/70">
-                  {story.slug}
-                </td>
+                  <td className="max-w-[160px] py-5 pr-4 text-[#37576B] dark:text-white/80">
+                    <span className="break-words">{story.slug}</span>
+                  </td>
 
-                <td className="py-4 pr-4">
-                    <div className="flex min-w-max flex-wrap gap-2">
-                    <Link
+
+
+                  <td className="py-5 pr-0">
+                    <div className="flex min-w-[420px] flex-wrap gap-2">
+                      <Link
                         href={`/cerita/${story.slug}`}
-                        className="rounded-full border border-[#0B2538]/20 px-4 py-2 font-bold text-[#0B2538] dark:border-white/20 dark:text-white"
-                    >
+                        className="rounded-full border border-white/15 px-4 py-2 font-bold text-[#0B2538] dark:text-white"
+                      >
                         Lihat
-                    </Link>
+                      </Link>
 
-                    <Link
+                      <Link
                         href={`/admin/cerita/${story.id}/edit`}
                         className="rounded-full bg-[#0E5A78] px-4 py-2 font-bold text-white"
-                    >
+                      >
                         Edit
-                    </Link>
+                      </Link>
 
-                    <Link
+                      <Link
                         href={`/admin/cerita/${story.id}/quiz`}
                         className="rounded-full bg-[#F6B23C] px-4 py-2 font-bold text-[#0B2538]"
-                    >
+                      >
                         Quiz
-                    </Link>
+                      </Link>
 
-                    <button
+                      <button
                         type="button"
                         onClick={() => handleToggleFeatured(story)}
                         className={`rounded-full px-4 py-2 font-bold ${
-                            story.is_featured
+                          story.is_featured
                             ? "bg-green-100 text-green-700"
                             : "bg-[#F6B23C] text-[#0B2538]"
                         }`}
-                        >
-                        {story.is_featured ? "Sedang Di Tampilkan" : "Tampilkan di Beranda"}
-                        </button>
+                      >
+                        {story.is_featured ? "Di Beranda" : "Jadikan Home"}
+                      </button>
 
-                    <button
+                      <button
                         type="button"
-                        onClick={() => handleDelete(story.id)}
+                        onClick={() => handleDelete(story)}
                         className="rounded-full bg-red-100 px-4 py-2 font-bold text-red-700"
-                    >
+                      >
                         Hapus
-                    </button>
+                      </button>
                     </div>
-                </td>
-              </tr>
-            ))}
-
-            {stories.length === 0 && (
-              <tr>
-                <td
-                  colSpan={5}
-                  className="py-10 text-center text-[#37576B] dark:text-white/70"
-                >
-                  Belum ada cerita di database.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </section>
   );
 }
