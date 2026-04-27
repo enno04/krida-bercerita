@@ -355,47 +355,51 @@ export default function AdminStoriesList() {
 
 
                   <td className="py-5 pr-0">
-                    <div className="flex min-w-[420px] flex-wrap gap-2">
+                    <div className="flex items-start gap-2">
                       <Link
                         href={`/cerita/${story.slug}`}
-                        className="rounded-full border border-white/15 px-4 py-2 font-bold text-[#0B2538] dark:text-white"
+                        className="rounded-full border border-white/20 px-4 py-2 font-bold text-white transition hover:bg-white/10"
                       >
                         Lihat
                       </Link>
 
                       <Link
                         href={`/admin/cerita/${story.id}/edit`}
-                        className="rounded-full bg-[#0E5A78] px-4 py-2 font-bold text-white"
+                        className="rounded-full bg-[#0E5A78] px-4 py-2 font-bold text-white transition hover:bg-[#0E5A78]/80"
                       >
                         Edit
                       </Link>
 
-                      <Link
-                        href={`/admin/cerita/${story.id}/quiz`}
-                        className="rounded-full bg-[#F6B23C] px-4 py-2 font-bold text-[#0B2538]"
-                      >
-                        Quiz
-                      </Link>
+                      <details className="relative">
+                        <summary className="flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-full border border-white/20 bg-white/5 text-xl font-bold text-white transition hover:bg-white/10 [&::-webkit-details-marker]:hidden">
+                          ⋮
+                        </summary>
 
-                      <button
-                        type="button"
-                        onClick={() => handleToggleFeatured(story)}
-                        className={`rounded-full px-4 py-2 font-bold ${
-                          story.is_featured
-                            ? "bg-green-100 text-green-700"
-                            : "bg-[#F6B23C] text-[#0B2538]"
-                        }`}
-                      >
-                        {story.is_featured ? "Di Beranda" : "Jadikan Home"}
-                      </button>
+                        <div className="absolute right-0 z-20 mt-2 w-56 overflow-hidden rounded-2xl border border-white/10 bg-[#0B2538] shadow-lg">
+                          <Link
+                            href={`/admin/cerita/${story.id}/quiz`}
+                            className="block px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+                          >
+                            Kelola Quiz
+                          </Link>
 
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(story)}
-                        className="rounded-full bg-red-100 px-4 py-2 font-bold text-red-700"
-                      >
-                        Hapus
-                      </button>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleFeatured(story)}
+                            className="block w-full px-4 py-3 text-left text-sm font-semibold text-white transition hover:bg-white/10"
+                          >
+                            {story.is_featured ? "Hapus dari Beranda" : "Tampilkan di Beranda"}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(story)}
+                            className="block w-full px-4 py-3 text-left text-sm font-semibold text-red-300 transition hover:bg-red-500/10"
+                          >
+                            Hapus Cerita
+                          </button>
+                        </div>
+                      </details>
                     </div>
                   </td>
                 </tr>
