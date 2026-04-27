@@ -88,7 +88,14 @@ export default function AdminStoryForm() {
       });
 
       if (error) {
-        setMessage(error.message);
+        if (error.code === "23505") {
+          setMessage(
+            `Cerita "${title}" sudah ditambahkan dalam katalog. Silakan masukkan cerita yang belum ada.`
+          );
+        } else {
+          setMessage(error.message);
+        }
+
         setIsLoading(false);
         return;
       }
@@ -110,7 +117,7 @@ export default function AdminStoryForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="mt-10 rounded-[32px] bg-white p-6 shadow-[0_10px_28px_rgba(11,37,56,0.09)] dark:bg-[#102C3D]"
+        className="mt-10 rounded-3xl bg-white p-6 shadow-[0_10px_28px_rgba(11,37,56,0.09)] dark:bg-[#102C3D]"
     >
       <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-center">
         <div>
@@ -290,7 +297,13 @@ export default function AdminStoryForm() {
       </label>
 
       {message && (
-        <p className="mt-5 rounded-2xl bg-[#0E5A78]/10 p-4 text-sm font-semibold text-[#0B2538] dark:bg-white/10 dark:text-white">
+        <p
+          className={`mt-5 rounded-2xl p-4 text-sm font-semibold ${
+            message.includes("sudah pernah") || message.includes("sudah digunakan")
+              ? "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-200"
+              : "bg-[#0E5A78]/10 text-[#0B2538] dark:bg-white/10 dark:text-white"
+          }`}
+        >
           {message}
         </p>
       )}
