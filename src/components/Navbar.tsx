@@ -41,6 +41,7 @@ export default function Navbar() {
               src="/logo-krida-bercerita.png"
               alt="Logo Krida Bercerita"
               fill
+              sizes="64px"
               className="object-contain"
               priority
             />

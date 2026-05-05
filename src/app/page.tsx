@@ -40,7 +40,10 @@ export default async function HomePage() {
 
   return (
     <main>
-      <section className="bg-[#FFF8E7] py-20 dark:bg-[#071722]">
+      <section className="relative overflow-hidden bg-[#FFF8E7] py-20 dark:bg-[#071722]">
+        <div className="pointer-events-none absolute right-[-120px] top-20 hidden h-80 w-80 rounded-full bg-[#EF4F3A]/10 blur-3xl dark:block" />
+        <div className="pointer-events-none absolute bottom-10 left-[-120px] hidden h-72 w-72 rounded-full bg-[#F6B23C]/10 blur-3xl dark:block" />
+
         <Container>
           <div className="grid items-center gap-14 lg:grid-cols-2">
             <div>
@@ -62,21 +65,21 @@ export default async function HomePage() {
               <div className="mt-8 flex flex-wrap gap-4">
                 <Link
                   href="/katalog"
-                  className="rounded-full bg-[#EF4F3A] px-7 py-4 font-bold text-white shadow-lg shadow-[#EF4F3A]/25"
+                  className="rounded-full bg-[#EF4F3A] px-7 py-4 font-bold text-white shadow-lg shadow-[#EF4F3A]/25 transition hover:-translate-y-1"
                 >
                   Mulai Membaca
                 </Link>
 
                 <Link
                   href="/fitur"
-                  className="rounded-full border-2 border-[#0B2538]/20 px-7 py-4 font-bold text-[#0B2538] dark:border-white/20 dark:text-white"
+                  className="rounded-full border-2 border-[#0B2538]/20 px-7 py-4 font-bold text-[#0B2538] transition hover:-translate-y-1 dark:border-white/20 dark:text-white"
                 >
                   Lihat Fitur
                 </Link>
               </div>
 
-              <div className="mt-10 grid max-w-md grid-cols-3 gap-6">
-                <div>
+              <div className="mt-10 grid max-w-md grid-cols-3 gap-4 sm:gap-6">
+                <div className="rounded-3xl bg-white/70 p-4 shadow-sm dark:bg-white/5">
                   <strong className="block text-2xl font-extrabold text-[#0B2538] dark:text-white">
                     38
                   </strong>
@@ -85,7 +88,7 @@ export default async function HomePage() {
                   </span>
                 </div>
 
-                <div>
+                <div className="rounded-3xl bg-white/70 p-4 shadow-sm dark:bg-white/5">
                   <strong className="block text-2xl font-extrabold text-[#0B2538] dark:text-white">
                     AI
                   </strong>
@@ -94,7 +97,7 @@ export default async function HomePage() {
                   </span>
                 </div>
 
-                <div>
+                <div className="rounded-3xl bg-white/70 p-4 shadow-sm dark:bg-white/5">
                   <strong className="block text-2xl font-extrabold text-[#0B2538] dark:text-white">
                     Quiz
                   </strong>
@@ -105,17 +108,20 @@ export default async function HomePage() {
               </div>
             </div>
 
-            <div className="relative flex min-h-[480px] items-center justify-center">
-              <div className="absolute h-[420px] w-[420px] rounded-full bg-[#F6B23C]/20" />
+            <div className="relative mx-auto flex min-h-[560px] w-full max-w-[640px] items-center justify-center">
+              <div className="absolute z-0 h-[460px] w-[460px] rounded-full bg-[#F6B23C]/15 blur-2xl dark:bg-[#F6B23C]/10" />
+              <div className="absolute z-0 h-[340px] w-[340px] rounded-full bg-[#EF4F3A]/12 blur-3xl" />
 
-              <Image
-                src="/logo-krida-bercerita.png"
-                alt="Ilustrasi Krida Bercerita"
-                width={520}
-                height={520}
-                className="relative z-10 drop-shadow-2xl"
-                priority
-              />
+              <div className="animate-float-logo relative z-10 w-full max-w-[560px]">
+                <Image
+                  src="/logo-krida-bercerita.png"
+                  alt="Logo Krida Bercerita"
+                  width={560}
+                  height={560}
+                  className="h-auto w-full drop-shadow-[0_24px_55px_rgba(0,0,0,0.35)]"
+                  priority
+                />
+              </div>
             </div>
           </div>
         </Container>
@@ -204,7 +210,7 @@ export default async function HomePage() {
             </div>
 
             <p className="max-w-md text-[#37576B] dark:text-white/70">
-              Pilih cerita rakyat berdasarkan judul, daerah asal, atau nilai 
+              Pilih cerita rakyat berdasarkan judul, daerah asal, atau nilai
               moral yang ingin dipelajari.
             </p>
           </div>
@@ -301,11 +307,10 @@ export default async function HomePage() {
                 src="/Cerita2.png"
                 alt="Tentang Krida Bercerita"
                 fill
+                sizes="(max-width: 768px) 100vw, 50vw"
                 className="object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#0B2538]/60 via-[#0B2538]/20 to-transparent" />
-              <div className="absolute bottom-6 left-6 right-6">
-              </div>
             </div>
 
             <div>

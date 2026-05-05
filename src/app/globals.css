@@ -38,3 +38,29 @@ button {
   background: #071722;
   color: #f8fbff;
 }
+
+@keyframes floatLogo {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+@keyframes floatLogoSoft {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
+}
+
+.animate-float-logo {
+  animation: floatLogo 6s ease-in-out infinite;
+}
+
+.animate-float-soft {
+  animation: floatLogoSoft 5s ease-in-out infinite;
+}

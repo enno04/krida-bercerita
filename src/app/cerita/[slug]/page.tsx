@@ -65,6 +65,7 @@ export default async function StoryDetailPage({
                   src={imageSrc}
                   alt={story.title}
                   fill
+                  sizes="(max-width: 1024px) 100vw, 720px"
                   className="object-cover"
                   priority
                 />

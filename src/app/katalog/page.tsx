@@ -204,7 +204,7 @@ export default function KatalogPage() {
           {isLoading && (
             <div className="rounded-[28px] bg-white p-10 text-center shadow-[0_10px_28px_rgba(11,37,56,0.09)] dark:bg-[#102C3D]">
               <p className="font-bold text-[#0B2538] dark:text-white">
-                Memuat cerita dari database...
+                Memuat cerita yang tersedia...
               </p>
             </div>
           )}
