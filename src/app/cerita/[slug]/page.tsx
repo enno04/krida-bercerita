@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import Container from "../../../components/Container";
 import { supabase } from "../../../lib/supabaseClient";
 import ReaderActions from "../../../components/ReaderActions";
+import ContinueReadingScroll from "../../../components/ContinueReadingScroll";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +48,7 @@ export default async function StoryDetailPage({
 
   return (
     <main className="bg-[#FFF8E7] dark:bg-[#071722]">
+      <ContinueReadingScroll storyId={story.id} />
       <section className="py-16">
         <Container>
           <Link
@@ -95,12 +97,19 @@ export default async function StoryDetailPage({
                   </span>
                 </div>
 
-                <div className="space-y-5 text-base leading-8 text-[#37576B] dark:text-white/70 md:text-lg md:leading-9">
-                {story.content.map((paragraph, index) => (
-                    <p key={index} className="whitespace-pre-line">
-                    {paragraph}
+                <div
+                  id="story-content"
+                  className="space-y-5 text-base leading-8 text-[#37576B] dark:text-white/70 md:text-lg md:leading-9"
+                >
+                  {story.content.map((paragraph, index) => (
+                    <p
+                      key={index}
+                      data-paragraph-index={index}
+                      className="whitespace-pre-line"
+                    >
+                      {paragraph}
                     </p>
-                ))}
+                  ))}
                 </div>
 
                 <div className="mt-10 rounded-[28px] bg-[#FFF8E7] p-6 dark:bg-[#071722]">
@@ -139,11 +148,6 @@ export default async function StoryDetailPage({
             <h2 className="text-xl font-extrabold text-[#0B2538] dark:text-white">
                 Fitur Pembaca
             </h2>
-
-            <p className="mt-3 text-sm leading-6 text-[#37576B] dark:text-white/70">
-                Kamu tetap bisa membaca tanpa login. Login dibutuhkan untuk menyimpan
-                progres membaca, bookmark, dan riwayat quiz.
-            </p>
 
             <ReaderActions storyId={story.id} />
             </aside>

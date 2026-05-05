@@ -1,33 +1,49 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import Link from "next/link";
 
 type ReaderActionsProps = {
   storyId: string;
+  contentSelector?: string;
 };
 
-export default function ReaderActions({ storyId }: ReaderActionsProps) {
-  const [userId, setUserId] = useState<string | null>(null);
-  const [isBookmarked, setIsBookmarked] = useState(false);
+type ReadingProgressRow = {
+  id: string;
+  progress_percent: number;
+  last_paragraph_index: number;
+  scroll_position: number;
+};
+
+export default function ReaderActions({
+  storyId,
+  contentSelector = "#story-content",
+}: ReaderActionsProps) {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [progressId, setProgressId] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
+  const [lastParagraphIndex, setLastParagraphIndex] = useState(0);
+  const [scrollPosition, setScrollPosition] = useState(0);
   const [message, setMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
+  const [isBookmarkSaved, setIsBookmarkSaved] = useState(false);
+
+  const latestProgressRef = useRef(0);
+  const latestParagraphRef = useRef(0);
+  const latestScrollRef = useRef(0);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    async function loadUserData() {
-      setIsLoading(true);
-
+    async function loadReaderData() {
       const { data: sessionData } = await supabase.auth.getSession();
       const user = sessionData.session?.user;
 
       if (!user) {
-        setUserId(null);
-        setIsLoading(false);
+        setIsLoggedIn(false);
         return;
       }
 
-      setUserId(user.id);
+      setIsLoggedIn(true);
 
       const { data: bookmarkData } = await supabase
         .from("bookmarks")
@@ -36,35 +52,159 @@ export default function ReaderActions({ storyId }: ReaderActionsProps) {
         .eq("story_id", storyId)
         .maybeSingle();
 
-      setIsBookmarked(Boolean(bookmarkData));
+      setIsBookmarkSaved(Boolean(bookmarkData));
 
-      const { data: progressData } = await supabase
+      const { data: progressData, error: progressError } = await supabase
         .from("reading_progress")
-        .select("progress_percent")
+        .select("id, progress_percent, last_paragraph_index, scroll_position")
         .eq("user_id", user.id)
         .eq("story_id", storyId)
-        .maybeSingle();
+        .maybeSingle<ReadingProgressRow>();
 
-      setProgress(progressData?.progress_percent ?? 0);
-      setIsLoading(false);
+      if (progressError) {
+        setMessage(progressError.message);
+        return;
+      }
+
+      if (progressData) {
+        setProgressId(progressData.id);
+        setProgress(progressData.progress_percent ?? 0);
+        setLastParagraphIndex(progressData.last_paragraph_index ?? 0);
+        setScrollPosition(progressData.scroll_position ?? 0);
+
+        latestProgressRef.current = progressData.progress_percent ?? 0;
+        latestParagraphRef.current = progressData.last_paragraph_index ?? 0;
+        latestScrollRef.current = progressData.scroll_position ?? 0;
+      } else {
+        const { data: newProgressData, error: insertError } = await supabase
+          .from("reading_progress")
+          .upsert(
+            {
+              user_id: user.id,
+              story_id: storyId,
+              progress_percent: 0,
+              last_paragraph_index: 0,
+              scroll_position: 0,
+            },
+            {
+              onConflict: "user_id,story_id",
+              ignoreDuplicates: false,
+            }
+          )
+          .select("id, progress_percent, last_paragraph_index, scroll_position")
+          .single<ReadingProgressRow>();
+
+        if (insertError) {
+          setMessage(
+            "Progress membaca gagal disiapkan. Silakan refresh halaman atau login ulang."
+          );
+          return;
+        }
+
+        setProgressId(newProgressData.id);
+        setMessage("");
+      }
     }
 
-    loadUserData();
+    loadReaderData();
   }, [storyId]);
 
-  async function toggleBookmark() {
-    setMessage("");
+  useEffect(() => {
+    if (!isLoggedIn || !progressId) return;
 
-    if (!userId) {
-      setMessage("Silakan login dulu untuk menyimpan bookmark.");
+    function calculateReadingProgress() {
+      const contentElement = document.querySelector(contentSelector);
+      if (!contentElement) return;
+
+      const contentRect = contentElement.getBoundingClientRect();
+      const contentTop = window.scrollY + contentRect.top;
+      const contentHeight = contentElement.scrollHeight;
+      const viewportHeight = window.innerHeight;
+
+      const currentScroll = window.scrollY;
+      const readableDistance = Math.max(contentHeight - viewportHeight * 0.5, 1);
+      const rawProgress =
+        ((currentScroll - contentTop + viewportHeight * 0.35) / readableDistance) *
+        100;
+
+      const nextProgress = Math.max(0, Math.min(100, Math.round(rawProgress)));
+
+      const paragraphs = Array.from(
+        contentElement.querySelectorAll("[data-paragraph-index]")
+      );
+
+      let currentParagraphIndex = 0;
+
+      paragraphs.forEach((paragraph) => {
+        const paragraphElement = paragraph as HTMLElement;
+        const rect = paragraphElement.getBoundingClientRect();
+
+        if (rect.top <= viewportHeight * 0.45) {
+          const index = Number(paragraphElement.dataset.paragraphIndex ?? 0);
+          currentParagraphIndex = index;
+        }
+      });
+
+      latestProgressRef.current = nextProgress;
+      latestParagraphRef.current = currentParagraphIndex;
+      latestScrollRef.current = Math.round(currentScroll);
+
+      setProgress(nextProgress);
+      setLastParagraphIndex(currentParagraphIndex);
+      setScrollPosition(Math.round(currentScroll));
+
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+
+      saveTimeoutRef.current = setTimeout(() => {
+        saveProgress();
+      }, 1200);
+    }
+
+    async function saveProgress() {
+      if (!progressId) return;
+
+      const { error } = await supabase
+        .from("reading_progress")
+        .update({
+          progress_percent: latestProgressRef.current,
+          last_paragraph_index: latestParagraphRef.current,
+          scroll_position: latestScrollRef.current,
+        })
+        .eq("id", progressId);
+
+      if (error) {
+        setMessage(error.message);
+      }
+    }
+
+    window.addEventListener("scroll", calculateReadingProgress);
+    calculateReadingProgress();
+
+    return () => {
+      window.removeEventListener("scroll", calculateReadingProgress);
+
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [isLoggedIn, progressId, contentSelector]);
+
+  async function handleBookmark() {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const user = sessionData.session?.user;
+
+    if (!user) {
+      setMessage("Login dulu untuk menyimpan bookmark.");
       return;
     }
 
-    if (isBookmarked) {
+    if (isBookmarkSaved) {
       const { error } = await supabase
         .from("bookmarks")
         .delete()
-        .eq("user_id", userId)
+        .eq("user_id", user.id)
         .eq("story_id", storyId);
 
       if (error) {
@@ -72,132 +212,151 @@ export default function ReaderActions({ storyId }: ReaderActionsProps) {
         return;
       }
 
-      setIsBookmarked(false);
+      setIsBookmarkSaved(false);
       setMessage("Bookmark dihapus.");
-    } else {
-      const { error } = await supabase.from("bookmarks").insert({
-        user_id: userId,
-        story_id: storyId,
-      });
-
-      if (error) {
-        setMessage(error.message);
-        return;
-      }
-
-      setIsBookmarked(true);
-      setMessage("Cerita berhasil disimpan ke bookmark.");
-    }
-  }
-
-  async function saveProgress(value: number) {
-    setMessage("");
-
-    if (!userId) {
-      setMessage("Silakan login dulu untuk menyimpan progress membaca.");
       return;
     }
 
-    const { error } = await supabase.from("reading_progress").upsert(
-      {
-        user_id: userId,
-        story_id: storyId,
-        progress_percent: value,
-        updated_at: new Date().toISOString(),
-      },
-      {
-        onConflict: "user_id,story_id",
-      }
-    );
+    const { error } = await supabase.from("bookmarks").insert({
+      user_id: user.id,
+      story_id: storyId,
+    });
 
     if (error) {
       setMessage(error.message);
       return;
     }
 
-    setProgress(value);
-    setMessage(`Progress membaca disimpan: ${value}%.`);
+    setIsBookmarkSaved(true);
+    setMessage("Cerita berhasil disimpan ke bookmark.");
   }
 
-  if (isLoading) {
+  async function handleMarkAsFinished() {
+    if (!progressId) {
+      setMessage("Login dulu untuk menyimpan progress.");
+      return;
+    }
+
+    const documentHeight = document.documentElement.scrollHeight;
+    const nextScrollPosition = Math.max(documentHeight - window.innerHeight, 0);
+
+    const { error } = await supabase
+      .from("reading_progress")
+      .update({
+        progress_percent: 100,
+        last_paragraph_index: 9999,
+        scroll_position: Math.round(nextScrollPosition),
+      })
+      .eq("id", progressId);
+
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+
+    setProgress(100);
+    setLastParagraphIndex(9999);
+    setScrollPosition(Math.round(nextScrollPosition));
+    setMessage("Cerita ditandai selesai dibaca.");
+  }
+
+  function handleContinueReading() {
+    if (!scrollPosition || scrollPosition <= 0) {
+      const contentElement = document.querySelector(contentSelector);
+      contentElement?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+      return;
+    }
+
+    window.scrollTo({
+      top: scrollPosition,
+      behavior: "smooth",
+    });
+  }
+
+  if (!isLoggedIn) {
     return (
-      <div className="mt-6 rounded-2xl bg-[#FFF8E7] p-4 dark:bg-[#071722]">
-        <p className="text-sm font-bold text-[#0B2538] dark:text-white">
-          Memuat fitur pembaca...
+      <div className="mt-6 rounded-3xl bg-[#FFF8E7] p-5 dark:bg-[#071722]">
+        <p className="text-sm leading-6 text-[#37576B] dark:text-white/70">
+          Kamu tetap bisa membaca tanpa login. Login dibutuhkan untuk menyimpan
+          progress membaca dan bookmark.
+        </p>
+
+        <Link
+          href="/login"
+          className="mt-5 inline-flex w-full items-center justify-center rounded-full bg-[#EF4F3A] px-5 py-3 text-center text-sm font-bold text-white shadow-lg shadow-[#EF4F3A]/20 transition hover:-translate-y-0.5 hover:bg-[#d94431]"
+        >
+          Login untuk Simpan Progress
+        </Link>
+
+        <p className="mt-3 text-center text-xs leading-5 text-[#37576B] dark:text-white/50">
+          Setelah login, progress membaca dan bookmark akan tersimpan di akun kamu.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="mt-6">
-      <div className="rounded-2xl bg-[#FFF8E7] p-4 dark:bg-[#071722]">
-        <p className="text-sm font-bold text-[#0B2538] dark:text-white">
-          Progress membaca
+    <div className="mt-6 space-y-4">
+      <div className="rounded-3xl bg-[#FFF8E7] p-5 dark:bg-[#071722]">
+        <p className="text-sm font-extrabold text-[#0B2538] dark:text-white">
+          Progress membaca saat ini
         </p>
 
-        <div className="mt-3 h-3 overflow-hidden rounded-full bg-[#0E5A78]/15">
+        <div className="mt-4 h-3 overflow-hidden rounded-full bg-[#0B2538]/10 dark:bg-white/10">
           <div
-            className="h-full rounded-full bg-[#EF4F3A]"
+            className="h-full rounded-full bg-[#EF4F3A] transition-all"
             style={{ width: `${progress}%` }}
           />
         </div>
 
-        <p className="mt-2 text-sm text-[#37576B] dark:text-white/70">
+        <p className="mt-3 text-sm font-semibold text-[#37576B] dark:text-white/70">
           {progress}% selesai
         </p>
 
-        <div className="mt-4 grid grid-cols-2 gap-2">
+        {lastParagraphIndex > 0 && progress < 100 && (
+          <p className="mt-1 text-xs text-[#37576B] dark:text-white/50">
+            Terakhir terbaca sekitar paragraf {lastParagraphIndex + 1}.
+          </p>
+        )}
+
+        {progress >= 100 && (
+          <p className="mt-1 text-xs font-bold text-green-600">
+            Cerita sudah selesai dibaca.
+          </p>
+        )}
+
+        <div className="mt-5 grid gap-3">
           <button
             type="button"
-            onClick={() => saveProgress(25)}
-            className="rounded-full border border-[#0B2538]/20 px-3 py-2 text-sm font-bold text-[#0B2538] dark:border-white/20 dark:text-white"
+            onClick={handleContinueReading}
+            className="rounded-full bg-[#0E5A78] px-5 py-3 text-sm font-bold text-white"
           >
-            25%
+            Lanjutkan Membaca
           </button>
 
           <button
             type="button"
-            onClick={() => saveProgress(50)}
-            className="rounded-full border border-[#0B2538]/20 px-3 py-2 text-sm font-bold text-[#0B2538] dark:border-white/20 dark:text-white"
+            onClick={handleMarkAsFinished}
+            className="rounded-full bg-[#EF4F3A] px-5 py-3 text-sm font-bold text-white"
           >
-            50%
+            Tandai Selesai
           </button>
 
           <button
             type="button"
-            onClick={() => saveProgress(75)}
-            className="rounded-full border border-[#0B2538]/20 px-3 py-2 text-sm font-bold text-[#0B2538] dark:border-white/20 dark:text-white"
+            onClick={handleBookmark}
+            className="rounded-full border-2 border-[#0B2538]/15 px-5 py-3 text-sm font-bold text-[#0B2538] dark:border-white/20 dark:text-white"
           >
-            75%
-          </button>
-
-          <button
-            type="button"
-            onClick={() => saveProgress(100)}
-            className="rounded-full bg-[#EF4F3A] px-3 py-2 text-sm font-bold text-white"
-          >
-            Selesai
+            {isBookmarkSaved ? "Hapus Bookmark" : "Simpan Bookmark"}
           </button>
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={toggleBookmark}
-        className="mt-5 w-full rounded-full border-2 border-[#0B2538]/20 px-5 py-3 font-bold text-[#0B2538] dark:border-white/20 dark:text-white"
-      >
-        {isBookmarked ? "Hapus Bookmark" : "Simpan Bookmark"}
-      </button>
-
-      {!userId && (
-        <p className="mt-3 text-xs leading-5 text-[#37576B] dark:text-white/60">
-          *Login diperlukan untuk menyimpan bookmark dan progress membaca.
-        </p>
-      )}
-
       {message && (
-        <p className="mt-4 rounded-2xl bg-[#0E5A78]/10 p-4 text-sm font-semibold text-[#0B2538] dark:bg-white/10 dark:text-white">
+        <p className="rounded-2xl bg-white p-4 text-sm font-semibold text-[#0B2538] dark:bg-white/10 dark:text-white">
           {message}
         </p>
       )}
