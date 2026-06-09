@@ -107,7 +107,7 @@ export default function TentangPage() {
             <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-[#37576B] dark:text-white/70">
               Berikut beberapa pertanyaan umum mengenai penggunaan website
               Krida Bercerita, mulai dari membaca cerita, mengerjakan quiz,
-              hingga fitur untuk user dan admin.
+              hingga fitur untuk user.
             </p>
           </div>
 
