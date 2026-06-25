@@ -216,11 +216,9 @@ git push origin main
 
 ## Pengembang
 
-Project ini dibuat oleh Kelompok 14:
+Project ini dibuat oleh:
 
 - Enno Penas Saputra K. - 202310370311330
-- Arkan Alsafi Sulaksono - 202210370311130
-- Muhamad Arga Kurniawan - 202310370311331
 
 Program Studi Informatika  
 Universitas Muhammadiyah Malang  
